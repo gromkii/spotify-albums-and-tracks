@@ -1,10 +1,10 @@
 // Self envoking function! once the document is ready, bootstrap our application.
-// We do this to make sure that all the HTML is rendered before we do things 
-// like attach event listeners and any dom manipulation.  
+// We do this to make sure that all the HTML is rendered before we do things
+// like attach event listeners and any dom manipulation.
 (function(){
   $(document).ready(function(){
     bootstrapSpotifySearch();
-  })
+  });
 })();
 
 /**
@@ -27,30 +27,32 @@ function bootstrapSpotifySearch(){
           url: searchUrl
       });
 
-      // Attach the callback for success 
+      // Attach the callback for success
       // (We could have used the success callback directly)
       spotifyQueryRequest.done(function (data) {
         var artists = data.artists;
+        console.log(data);
 
         // Clear the output area
         outputArea.html('');
 
-        // The spotify API sends back an arrat 'items' 
+        // The spotify API sends back an arrat 'items'
         // Which contains the first 20 matching elements.
         // In our case they are artists.
         artists.items.forEach(function(artist){
-          var artistLi = $("<li>" + artist.name + " - " + artist.id + "</li>")
+          var artistLi = $("<li>" + artist.name + " - " + artist.id + "</li>");
           artistLi.attr('data-spotify-id', artist.id);
           outputArea.append(artistLi);
-
           artistLi.click(displayAlbumsAndTracks);
-        })
+
+        });
+
       });
 
-      // Attach the callback for failure 
+      // Attach the callback for failure
       // (Again, we could have used the error callback direcetly)
       spotifyQueryRequest.fail(function (error) {
-        console.log("Something Failed During Spotify Q Request:")
+        console.log("Something Failed During Spotify Q Request:");
         console.log(error);
       });
   });
@@ -59,12 +61,72 @@ function bootstrapSpotifySearch(){
 /* COMPLETE THIS FUNCTION! */
 function displayAlbumsAndTracks(event) {
   var appendToMe = $('#albums-and-tracks');
+  var albumData = null;
+  var albumArray = [];
+  var tracksArray = [];
 
-  // These two lines can be deleted. They're mostly for show. 
+
+  // These two lines can be deleted. They're mostly for show.
   console.log("you clicked on:");
-  console.log($(event.target).attr('data-spotify-id'));//.attr('data-spotify-id'));
+
+  var artistId = $(event.target).attr('data-spotify-id');
+  var getAlbums = $.ajax({
+      type: "GET",
+      dataType: 'json',
+      url: 'https://api.spotify.com/v1/artists/' + artistId + '/albums'
+    });
+
+getAlbums.done(function(data){
+  //Append to appendToMe
+
+  albumData = data.items;
+  albumData.forEach(function(element){
+    // albumArray.push(element.id);
+    albumArray.push({
+      'name' : element.name,
+      'id' : element.id,
+      'image' : element.images[0]
+    });
+
+
+    if (albumArray.length === albumData.length){
+
+      albumArray.forEach(function(album){
+        var getTracks = $.ajax({
+          type: 'GET',
+          dataType: 'json',
+          url: 'https://api.spotify.com/v1/albums/' + album.id + '/tracks'
+        });
+
+        getTracks.done(function(data){
+          tracksData = data.items;
+          appendToMe.append("<h3>" + album.name + "</h3>");
+          appendToMe.append('<img src="' + album.image.url + '">');
+          appendToMe.append('<ol class="' + album.id + '">');
+          for (var i=0; i < tracksData.length; i++){
+            $('.' + album.id).append("<li>" + tracksData[i].name + "</li>");
+          }
+          appendToMe.append('</ol>');
+        });
+      });
+
+
+
+    }
+  });
+});
+
+
 }
 
 /* YOU MAY WANT TO CREATE HELPER FUNCTIONS OF YOUR OWN */
 /* THEN CALL THEM OR REFERENCE THEM FROM displayAlbumsAndTracks */
 /* THATS PERFECTLY FINE, CREATE AS MANY AS YOU'D LIKE */
+
+
+/*
+
+artistID get Albums 'https://api.spotify.com/v1/artists/'+ artistID + '/albums?album_type=album'
+albumID get Tracks 'https://api.spotify.com/v1/albums/' + albumID+ + '/tracks'
+
+*/
